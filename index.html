@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HYPER SAFE INVENTORY</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial;}
+body{background:#0b0b0b;color:white;}
+
+/* LOGIN */
+#loginPage{
+width:100%;height:100vh;
+display:flex;justify-content:center;align-items:center;
+background:linear-gradient(rgba(0,0,0,.8),rgba(0,0,0,.8)),
+url('https://images.unsplash.com/photo-1511512578047-dfb367046420');
+background-size:cover;
+}
+
+.login-box{
+width:360px;
+background:#141414;
+padding:30px;
+border-radius:20px;
+border:1px solid #ff2d2d;
+}
+
+input,select,button{
+width:100%;
+padding:10px;
+margin-top:10px;
+border-radius:10px;
+border:none;
+outline:none;
+}
+
+button{cursor:pointer;font-weight:bold;}
+
+/* MAIN */
+#mainPage{display:none;padding:20px;}
+
+.topbar{
+display:flex;justify-content:space-between;
+background:#141414;
+padding:15px;
+border-radius:15px;
+margin-bottom:20px;
+}
+
+.logo{color:#ff3c3c;font-size:20px;font-weight:bold;}
+
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:20px;}
+
+.card{background:#151515;padding:15px;border-radius:15px;margin-bottom:15px;}
+
+.inventory{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:15px;
+margin-top:15px;
+}
+
+.item{
+background:#1d1d1d;
+padding:15px;
+border-radius:15px;
+}
+
+.item img{
+width:80px;height:80px;
+object-fit:contain;
+display:block;
+margin:auto;
+}
+
+.item h4{text-align:center;margin-top:10px;}
+.item p{text-align:center;opacity:.8;}
+
+/* SINGLE INPUT ACTION */
+.action-single{
+margin-top:10px;
+background:#121212;
+padding:10px;
+border-radius:12px;
+border:1px solid #2a2a2a;
+}
+
+.action-single input{
+width:100%;
+padding:8px;
+border-radius:8px;
+background:#1d1d1d;
+color:white;
+margin-bottom:8px;
+}
+
+.btn-row{
+display:flex;
+gap:10px;
+}
+
+.btn-withdraw{
+flex:1;
+padding:8px;
+border-radius:8px;
+background:#d93b3b;
+color:white;
+font-weight:bold;
+}
+
+.btn-add{
+flex:1;
+padding:8px;
+border-radius:8px;
+background:#2ecc71;
+color:black;
+font-weight:bold;
+}
+
+/* LOG */
+.log{
+background:#222;
+padding:8px;
+margin-bottom:8px;
+border-left:3px solid red;
+font-size:13px;
+}
+
+/* ADMIN PANEL */
+#adminPanel button{
+width:100%;
+margin-top:10px;
+padding:10px;
+border-radius:10px;
+background:#7d1010;
+color:white;
+font-weight:bold;
+cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="loginPage">
+<div class="login-box">
+<h2>HYPER SAFE LOGIN</h2>
+
+<input id="username" placeholder="Username">
+<input id="password" type="password" placeholder="Password">
+
+<button onclick="login()" style="background:#ff2d2d;color:white;">
+LOGIN
+</button>
+
+</div>
+</div>
+
+<!-- MAIN -->
+<div id="mainPage">
+
+<div class="topbar">
+<div class="logo">🔫 HYPER STORAGE</div>
+<div>
+<div id="playerName"></div>
+<div id="roleText"></div>
+<button onclick="logout()" style="background:#333;color:white;margin-top:5px;">
+Logout
+</button>
+</div>
+</div>
+
+<div class="grid">
+
+<!-- LEFT -->
+<div>
+
+<!-- ADMIN PANEL -->
+<div class="card" id="adminPanel" style="display:none;">
+<h3>👑 ADMIN PANEL</h3>
+
+<button onclick="clearLogs()">🗑️ ลบประวัติทั้งหมด</button>
+</div>
+
+<!-- ADD ITEM (ADMIN ONLY) -->
+<div class="card" id="addBox" style="display:none;">
+<h3>➕ เพิ่มไอเท็ม</h3>
+
+<select id="preset">
+<option value="เกราะ|img">เกราะ</option>
+<option value="AED|img">AED</option>
+<option value="Penkiller|img">Penkiller</option>
+<option value="other">อื่นๆ</option>
+</select>
+
+<input id="name" placeholder="ชื่อไอเท็ม">
+<input id="amount" type="number" placeholder="จำนวน">
+<input id="image" placeholder="URL รูป">
+
+<button onclick="createItem()" style="background:#2ecc71;">
+เพิ่ม
+</button>
+</div>
+
+<!-- INVENTORY -->
+<div class="card">
+<h3>📦 Inventory</h3>
+<div class="inventory" id="inventory"></div>
+</div>
+
+</div>
+
+<!-- RIGHT -->
+<div>
+
+<div class="card">
+<h3>📜 History</h3>
+<div id="history"></div>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const MEMBER_PASSWORD="1234";
+const ADMIN_PASSWORD="4444";
+
+let isAdmin=false;
+
+let items=JSON.parse(localStorage.getItem("items"))||[
+{name:"เกราะ",amount:50,image:"https://cdn-icons-png.flaticon.com/512/1041/1041916.png"},
+{name:"AED",amount:20,image:"https://cdn-icons-png.flaticon.com/512/2966/2966480.png"}
+];
+
+let logs=JSON.parse(localStorage.getItem("logs"))||[];
+
+function save(){
+localStorage.setItem("items",JSON.stringify(items));
+localStorage.setItem("logs",JSON.stringify(logs));
+}
+
+/* LOGIN */
+function login(){
+let u=document.getElementById("username").value;
+let p=document.getElementById("password").value;
+
+if(!u)return alert("ใส่ username");
+
+if(p===ADMIN_PASSWORD)isAdmin=true;
+else if(p===MEMBER_PASSWORD)isAdmin=false;
+else return alert("รหัสผิด");
+
+openPanel(u);
+}
+
+/* OPEN */
+function openPanel(user){
+document.getElementById("loginPage").style.display="none";
+document.getElementById("mainPage").style.display="block";
+
+document.getElementById("playerName").innerText="👤 "+user;
+document.getElementById("roleText").innerText=isAdmin?"👑 ADMIN":"👤 MEMBER";
+
+if(isAdmin){
+document.getElementById("adminPanel").style.display="block";
+document.getElementById("addBox").style.display="block";
+}
+
+render();
+}
+
+/* LOGOUT */
+function logout(){
+location.reload();
+}
+
+/* LOG */
+function addLog(text){
+logs.unshift(text+" | "+new Date().toLocaleString());
+save();
+renderLogs();
+}
+
+/* CREATE ITEM */
+function createItem(){
+if(!isAdmin)return;
+
+let p=document.getElementById("preset").value;
+let n=document.getElementById("name").value;
+let a=parseInt(document.getElementById("amount").value);
+let img=document.getElementById("image").value;
+
+if(!a||a<=0)return;
+
+let name,image;
+
+if(p==="other"){
+name=n;
+image=img||"https://cdn-icons-png.flaticon.com/512/3523/3523887.png";
+}else{
+let s=p.split("|");
+name=n||s[0];
+image=img||s[1];
+}
+
+items.push({name,amount:a,image});
+addLog("เพิ่ม "+name);
+save();
+renderItems();
+}
+
+/* SINGLE INPUT SYSTEM */
+function withdraw(i){
+let v=parseInt(document.getElementById("v"+i).value);
+if(!v||v<=0)return;
+if(items[i].amount<v)return alert("ไม่พอ");
+
+items[i].amount-=v;
+addLog("เบิก "+items[i].name+" "+v);
+save();
+renderItems();
+}
+
+function addStock(i){
+let v=parseInt(document.getElementById("v"+i).value);
+if(!v||v<=0)return;
+
+items[i].amount+=v;
+addLog("เพิ่ม "+items[i].name+" "+v);
+save();
+renderItems();
+}
+
+/* CLEAR LOG */
+function clearLogs(){
+if(!isAdmin)return;
+if(confirm("ลบประวัติทั้งหมด?")){
+logs=[];
+save();
+renderLogs();
+}
+}
+
+/* RENDER */
+function render(){
+renderItems();
+renderLogs();
+}
+
+function renderItems(){
+let box=document.getElementById("inventory");
+box.innerHTML="";
+
+items.forEach((it,i)=>{
+
+box.innerHTML+=`
+<div class="item">
+
+<img src="${it.image}">
+<h4>${it.name}</h4>
+<p>จำนวน: ${it.amount}</p>
+
+<div class="action-single">
+
+<input id="v${i}" type="number" placeholder="ใส่จำนวน">
+
+<div class="btn-row">
+
+<button class="btn-withdraw" onclick="withdraw(${i})">
+🔴 เบิก
+</button>
+
+<button class="btn-add" onclick="addStock(${i})">
+🟢 เพิ่ม
+</button>
+
+</div>
+
+</div>
+
+</div>
+`;
+});
+}
+
+function renderLogs(){
+let h=document.getElementById("history");
+h.innerHTML="";
+logs.forEach(l=>{
+h.innerHTML+=`<div class="log">${l}</div>`;
+});
+}
+
+</script>
+
+</body>
+</html>
